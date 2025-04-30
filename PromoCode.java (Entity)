@@ -1,128 +1,26 @@
-package com.example.promo;
+package com.example.promo.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
-import java.util.*;
 
-// === Entity: PromoCode ===
 @Entity
 @Table(name = "promo_codes")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class PromoCode {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true)
     private String code;
 
-    private Integer discountPercent;
-    private Integer fixedAmount;
+    private int discountPercentage;
 
-    private LocalDate validFrom;
-    private LocalDate validUntil;
+    private LocalDate createdAt;
 
-    private Integer maxUsage;
-    private Integer usedCount = 0;
-}
+    private LocalDate expiresAt;
 
-// === Entity: PromoUsage ===
-@Entity
-@Table(name = "promo_usage")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class PromoUsage {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private boolean used;
 
-    @ManyToOne
-    @JoinColumn(name = "promo_code_id")
-    private PromoCode promoCode;
-
-    private Long bookingId;
-
-    private LocalDate appliedAt;
-}
-
-// === Repository Interfaces ===
-interface PromoCodeRepository extends JpaRepository<PromoCode, Long> {
-    Optional<PromoCode> findByCode(String code);
-}
-
-interface PromoUsageRepository extends JpaRepository<PromoUsage, Long> {
-    boolean existsByPromoCodeAndBookingId(PromoCode code, Long bookingId);
-}
-
-// === Service ===
-@Service
-@RequiredArgsConstructor
-public class PromoService {
-    private final PromoCodeRepository promoCodeRepo;
-    private final PromoUsageRepository promoUsageRepo;
-
-    public PromoCode generatePromoCode(String email) {
-        String code = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        PromoCode promo = PromoCode.builder()
-                .code(code)
-                .discountPercent(10)
-                .validFrom(LocalDate.now())
-                .validUntil(LocalDate.now().plusDays(30))
-                .maxUsage(1)
-                .usedCount(0)
-                .build();
-        return promoCodeRepo.save(promo);
-    }
-
-    public boolean validatePromoCode(String code, Long bookingId) {
-        Optional<PromoCode> optional = promoCodeRepo.findByCode(code);
-        if (optional.isEmpty()) return false;
-        PromoCode promo = optional.get();
-
-        if (LocalDate.now().isBefore(promo.getValidFrom()) ||
-            LocalDate.now().isAfter(promo.getValidUntil())) return false;
-
-        if (promo.getUsedCount() >= promo.getMaxUsage()) return false;
-
-        if (promoUsageRepo.existsByPromoCodeAndBookingId(promo, bookingId)) return false;
-
-        // mark as used
-        promo.setUsedCount(promo.getUsedCount() + 1);
-        promoCodeRepo.save(promo);
-
-        promoUsageRepo.save(PromoUsage.builder()
-                .promoCode(promo)
-                .bookingId(bookingId)
-                .appliedAt(LocalDate.now())
-                .build());
-
-        return true;
-    }
-}
-
-// === REST Controller ===
-@RestController
-@RequestMapping("/promo")
-@RequiredArgsConstructor
-public class PromoController {
-    private final PromoService promoService;
-
-    @PostMapping("/generate")
-    public PromoCode generate(@RequestParam String email) {
-        return promoService.generatePromoCode(email);
-    }
-
-    @GetMapping("/validate")
-    public boolean validate(@RequestParam String code, @RequestParam Long bookingId) {
-        return promoService.validatePromoCode(code, bookingId);
-    }
+    // Constructors, getters, setters
 }
