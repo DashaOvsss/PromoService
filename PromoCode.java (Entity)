@@ -1,0 +1,26 @@
+package com.example.promo.entity;
+
+import jakarta.persistence.*;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "promo_codes")
+public class PromoCode {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true)
+    private String code;
+
+    private int discountPercentage;
+
+    private LocalDate createdAt;
+
+    private LocalDate expiresAt;
+
+    private boolean used;
+
+    // Constructors, getters, setters
+}
